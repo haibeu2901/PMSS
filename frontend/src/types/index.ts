@@ -229,6 +229,25 @@ export interface WeeklyContributorActivityDto {
   deletions: number;
 }
 
+export interface GithubContributionReportSummaryDto {
+  reportId: string;
+  projectId: string;
+  periodStart: string;
+  periodEnd: string;
+  totalCommits: number;
+  contributorCount: number;
+  activeContributorCount: number;
+  executiveSummary: string;
+  modelProvider: string;
+  modelName: string;
+  createdAt: string;
+}
+
+export interface GithubContributionReportDto extends GithubContributionReportSummaryDto {
+  insightsJson: string;
+  markdownContent: string;
+}
+
 // ============================================
 // SUPPORTING TYPES
 // ============================================

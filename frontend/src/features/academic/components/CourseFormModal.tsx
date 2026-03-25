@@ -9,6 +9,7 @@ import {
   useDeleteCourse,
 } from "../api/useCourses";
 import type { Course } from "@/types";
+import toast from "react-hot-toast";
 
 interface CourseFormData {
   code: string;
@@ -93,9 +94,15 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
           data: payload,
         });
       }
+      toast.success(
+        mode === "create"
+          ? "Course created successfully"
+          : "Course updated successfully",
+      );
       onClose();
     } catch (error) {
       console.error("Failed to save course:", error);
+      toast.error("Failed to save course");
     }
   };
 
@@ -186,9 +193,11 @@ export const DeleteCourseDialog: React.FC<DeleteCourseDialogProps> = ({
 
     try {
       await deleteMutation.mutateAsync(course.courseId);
+      toast.success("Course deleted successfully");
       onClose();
     } catch (error) {
       console.error("Failed to delete course:", error);
+      toast.error("Failed to delete course");
     }
   };
 

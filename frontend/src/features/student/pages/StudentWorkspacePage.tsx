@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import {
   ArrowLeft,
   Info,
@@ -9,7 +10,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Modal } from "@/components/ui/Modal";
+import { Modal, ConfirmDialog } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
@@ -29,6 +30,7 @@ export function StudentWorkspacePage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("info");
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
 
@@ -94,30 +96,28 @@ export function StudentWorkspacePage() {
         name: editName.trim(),
         description: editDescription.trim() || undefined,
       });
+      toast.success("Project updated successfully");
       setShowEditModal(false);
     } catch (error) {
       console.error("Failed to update project:", error);
-      alert("Failed to update project. Please try again.");
+      toast.error("Failed to update project. Please try again.");
     }
   };
 
-  const handleDeleteProject = async () => {
-    if (!projectId || !project) return;
+  const handleDeleteProject = () => {
+    setShowDeleteConfirm(true);
+  };
 
-    if (
-      !confirm(
-        `Are you sure you want to delete "${project.name}"? This action cannot be undone.`,
-      )
-    ) {
-      return;
-    }
+  const handleConfirmDelete = async () => {
+    if (!projectId) return;
 
     try {
       await deleteProjectMutation.mutateAsync(projectId);
+      toast.success("Project deleted successfully");
       navigate("/student/workspace");
     } catch (error) {
       console.error("Failed to delete project:", error);
-      alert("Failed to delete project. Please try again.");
+      toast.error("Failed to delete project. Please try again.");
     }
   };
 
@@ -247,6 +247,18 @@ export function StudentWorkspacePage() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Project"
+        message={`Are you sure you want to delete "${project.name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={deleteProjectMutation.isPending}
+      />
     </div>
   );
 }

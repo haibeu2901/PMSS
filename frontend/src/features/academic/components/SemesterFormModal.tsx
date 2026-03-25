@@ -9,6 +9,7 @@ import {
   type CreateSemesterInput,
 } from "../api/useSemesters";
 import type { Semester } from "@/types";
+import toast from "react-hot-toast";
 
 interface SemesterFormData {
   name: string;
@@ -110,9 +111,15 @@ export const SemesterFormModal: React.FC<SemesterFormModalProps> = ({
           data: payload,
         });
       }
+      toast.success(
+        mode === "create"
+          ? "Semester created successfully"
+          : "Semester updated successfully",
+      );
       onClose();
     } catch (error) {
       console.error("Failed to save semester:", error);
+      toast.error("Failed to save semester");
     }
   };
 
@@ -201,9 +208,11 @@ export const DeleteSemesterDialog: React.FC<DeleteSemesterDialogProps> = ({
 
     try {
       await deleteMutation.mutateAsync(semester.semesterId);
+      toast.success("Semester deleted successfully");
       onClose();
     } catch (error) {
       console.error("Failed to delete semester:", error);
+      toast.error("Failed to delete semester");
     }
   };
 

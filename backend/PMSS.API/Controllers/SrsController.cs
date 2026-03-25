@@ -38,6 +38,7 @@ public class SrsController : ControllerBase
     /// </summary>
     /// <param name="token">The temporary file token</param>
     [HttpGet("api/v1/generated-files/{token}")]
+    [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public IActionResult DownloadGeneratedFile(string token)
@@ -202,7 +203,13 @@ public class SrsController : ControllerBase
     private object BuildDownloadLinkResponse(byte[] data, string contentType, string fileName)
     {
         var token = _downloadStore.Save(data, contentType, fileName, TimeSpan.FromMinutes(LinkTtlMinutes));
-        var downloadUrl = Url.ActionLink(nameof(DownloadGeneratedFile), values: new { token });
+        // Build an absolute URL so the link works when deployed behind proxies/load-balancers
+        var downloadUrl = Url.Action(
+            nameof(DownloadGeneratedFile),
+            "Srs",
+            new { token },
+            Request.Scheme,
+            Request.Host.Value);
 
         return new
         {

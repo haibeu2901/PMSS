@@ -69,8 +69,9 @@ public class JiraApiService : IJiraApiService
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
         // Build the Jira search endpoint URL
+        // Use "fields=*all" and expand changelog/renderedFields so we capture custom fields, attachments, worklogs, and history
         var jql = $"project = {jiraConfig.ProjectKey} ORDER BY created DESC";
-        var fields = "summary,description,status,issuetype,priority,labels,components,assignee,created,updated,issuelinks,fixVersions,parent,comment,resolution,subtasks,environment";
+        var fields = "*all";
 
         var baseUrl = $"{jiraConfig.JiraUrl.TrimEnd('/')}/rest/api/3/search/jql";
         var allIssues = new List<JsonElement>();
@@ -80,9 +81,11 @@ public class JiraApiService : IJiraApiService
         // Paginate through all Jira issues to ensure nothing is missed
         do
         {
+            // Include expand parameters to retrieve changelog/history and rendered fields (e.g., HTML for descriptions/comments)
             var searchUrl = $"{baseUrl}" +
                             $"?jql={HttpUtility.UrlEncode(jql)}" +
                             $"&fields={fields}" +
+                            $"&expand=changelog,renderedFields" +
                             $"&startAt={startAt}" +
                             $"&maxResults=100";
 
@@ -110,6 +113,50 @@ public class JiraApiService : IJiraApiService
         } while (startAt < total);
 
         // Return a combined JSON with all issues
-        return JsonSerializer.Serialize(new { issues = allIssues, total = allIssues.Count }, JsonOptions);
+        // To ensure we capture every possible piece of information, perform a per-issue detailed fetch
+        // This will include any fields or expansions that the search endpoint might omit for some field types
+        var detailedIssues = new List<JsonElement>(allIssues.Count);
+
+        foreach (var issue in allIssues)
+        {
+            try
+            {
+                if (!issue.TryGetProperty("key", out var keyEl) || keyEl.ValueKind != JsonValueKind.String)
+                {
+                    detailedIssues.Add(issue);
+                    continue;
+                }
+
+                var issueKey = keyEl.GetString();
+                if (string.IsNullOrWhiteSpace(issueKey))
+                {
+                    detailedIssues.Add(issue);
+                    continue;
+                }
+
+                // Fetch full issue details including changelog, rendered fields, names, schema, operations, editmeta, properties, transitions
+                var issueUrl = $"{jiraConfig.JiraUrl.TrimEnd('/')}/rest/api/3/issue/{HttpUtility.UrlEncode(issueKey)}" +
+                               "?expand=changelog,renderedFields,names,schema,operations,editmeta,properties,transitions";
+
+                var issueResp = await client.GetAsync(issueUrl);
+                if (!issueResp.IsSuccessStatusCode)
+                {
+                    // If detailed fetch fails for this issue, fall back to the issue returned by search
+                    detailedIssues.Add(issue);
+                    continue;
+                }
+
+                var issueRaw = await issueResp.Content.ReadAsStringAsync();
+                using var issueDoc = JsonDocument.Parse(issueRaw);
+                detailedIssues.Add(issueDoc.RootElement.Clone());
+            }
+            catch
+            {
+                // In case of any unexpected error, include the original issue and continue
+                detailedIssues.Add(issue);
+            }
+        }
+
+        return JsonSerializer.Serialize(new { issues = detailedIssues, total = detailedIssues.Count }, JsonOptions);
     }
 }

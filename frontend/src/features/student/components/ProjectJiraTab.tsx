@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { toast } from "react-hot-toast";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -8,8 +9,17 @@ import {
   useJiraConfig,
   useCreateJiraConfig,
   useUpdateJiraConfig,
+  useListSrsFiles,
+  useGenerateSrs,
 } from "../api/useProjects";
-import { CheckSquare, ExternalLink, Settings } from "lucide-react";
+import { getAuthToken } from "@/features/auth/api/authApi";
+import {
+  CheckSquare,
+  ExternalLink,
+  Settings,
+  FileText,
+  Download,
+} from "lucide-react";
 
 interface ProjectJiraTabProps {
   projectId: string;
@@ -21,9 +31,102 @@ export function ProjectJiraTab({
   readOnly = false,
 }: ProjectJiraTabProps) {
   const [showConfigModal, setShowConfigModal] = useState(false);
-  const { data: config, isLoading } = useJiraConfig(projectId);
+  const [lastGeneratedFilePath, setLastGeneratedFilePath] = useState<
+    string | null
+  >(null);
+  const [downloadingFileName, setDownloadingFileName] = useState<string | null>(
+    null,
+  );
+  const apiBaseUrl =
+    import.meta.env.VITE_REST_API_URL || window.location.origin;
 
+  const { data: config, isLoading } = useJiraConfig(projectId);
   const hasConfig = !!config;
+  const { data: srsData, isLoading: isLoadingSrs } = useListSrsFiles(
+    projectId,
+    hasConfig,
+  );
+  const generateSrsMutation = useGenerateSrs();
+
+  const handleGenerateSrs = async () => {
+    if (readOnly) return;
+    try {
+      const result = await generateSrsMutation.mutateAsync({
+        projectId,
+        usePaidModel: true,
+        modelOption: "",
+      });
+      // Handle file download
+      const blob = new Blob([result.data as string], { type: "text/markdown" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `SRS_${projectId}.md`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success(`SRS generated successfully`);
+    } catch (error) {
+      console.error("Failed to generate SRS:", error);
+      toast.error("Failed to generate SRS. Please try again.");
+    }
+  };
+
+  const downloadProtectedFile = async (
+    path: string,
+    suggestedFileName: string,
+  ) => {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        throw new Error("Missing authentication token. Please login again.");
+      }
+
+      const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+      const downloadUrl = new URL(normalizedPath, apiBaseUrl).toString();
+      const response = await fetch(downloadUrl, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || `Download failed (${response.status})`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = suggestedFileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Failed to download file:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to download file. Please try again.",
+      );
+    }
+  };
+
+  const handleDownloadExistingFile = async (fileName: string) => {
+    try {
+      setDownloadingFileName(fileName);
+      await downloadProtectedFile(
+        `/api/jira/srs/download/${fileName}`,
+        fileName,
+      );
+    } finally {
+      setDownloadingFileName(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -140,6 +243,72 @@ export function ProjectJiraTab({
               </a>
             </div>
           </Card>
+
+          {/* SRS Documents */}
+          <Card className="p-6">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
+              <h2 className="text-lg font-semibold">
+                Software Requirements Specification (SRS)
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {!readOnly && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGenerateSrs}
+                    isLoading={generateSrsMutation.isPending}
+                    disabled={!hasConfig}
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Generate & Save (AI)
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {lastGeneratedFilePath && (
+              <p className="mb-4 text-sm text-gray-500">
+                Latest AI-generated file saved at
+                <span className="ml-1 font-medium">
+                  {lastGeneratedFilePath}
+                </span>
+              </p>
+            )}
+
+            {isLoadingSrs ? (
+              <div className="text-center py-4 text-sm text-gray-500">
+                Loading SRS files...
+              </div>
+            ) : srsData?.files?.length ? (
+              <div className="space-y-2">
+                {srsData.files.map((fileName) => (
+                  <div
+                    key={fileName}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        {fileName}
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleDownloadExistingFile(fileName)}
+                      isLoading={downloadingFileName === fileName}
+                      title="Download"
+                    >
+                      <Download className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 text-sm text-gray-500 border border-dashed rounded-lg dark:border-gray-700">
+                No SRS document generated yet.
+              </div>
+            )}
+          </Card>
         </>
       )}
 
@@ -177,6 +346,17 @@ function JiraConfigModal({
     apiToken: "",
     projectKey: existingConfig?.projectKey || "",
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        jiraUrl: existingConfig?.jiraUrl || "",
+        email: existingConfig?.email || "",
+        apiToken: "",
+        projectKey: existingConfig?.projectKey || "",
+      });
+    }
+  }, [isOpen, existingConfig]);
 
   const createMutation = useCreateJiraConfig();
   const updateMutation = useUpdateJiraConfig();
