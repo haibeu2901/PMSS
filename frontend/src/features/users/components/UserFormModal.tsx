@@ -5,6 +5,7 @@ import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { useCreateUser, useUpdateUser, useDeleteUser } from "../api/useUsers";
 import type { User, UserRole } from "@/types";
+import toast from "react-hot-toast";
 
 // Form data type
 interface UserFormData {
@@ -118,9 +119,15 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           },
         });
       }
+      toast.success(
+        mode === "create"
+          ? "User created successfully"
+          : "User updated successfully",
+      );
       onClose();
     } catch (error) {
       console.error("Failed to save user:", error);
+      toast.error("Failed to save user");
     }
   };
 
@@ -241,9 +248,11 @@ export const DeleteUserDialog: React.FC<DeleteUserDialogProps> = ({
 
     try {
       await deleteMutation.mutateAsync(user.userId);
+      toast.success("User deleted successfully");
       onClose();
     } catch (error) {
       console.error("Failed to delete user:", error);
+      toast.error("Failed to delete user");
     }
   };
 

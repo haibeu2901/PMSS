@@ -7,6 +7,8 @@ import type {
   GithubRepoDto,
   JiraConfigDto,
   ProjectGithubContributionDto,
+  GithubContributionReportDto,
+  GithubContributionReportSummaryDto,
 } from "@/types";
 import {
   GET_USER_PROJECTS,
@@ -410,12 +412,18 @@ export const useJiraConfig = (projectId: string) => {
     queryFn: async () => {
       try {
         const response = await apiClient.get<JiraConfigDto>(
-          `/api/v1/projects/${projectId}/jira-config`,
+          `/api/jira/config/${projectId}`,
         );
         return response.data;
       } catch (error: any) {
         // 404 means no config exists - return null instead of throwing
-        if (error?.response?.status === 404) {
+        // Check both Axios style (if switched in future) and native Error message from ApiClient
+        if (
+          error?.response?.status === 404 ||
+          error?.message?.includes("404") ||
+          error?.message?.includes("not found") ||
+          error?.message?.includes("No Jira configuration found")
+        ) {
           return null;
         }
         throw error;
@@ -438,15 +446,13 @@ export const useCreateJiraConfig = () => {
 
   return useMutation({
     mutationFn: async (data: CreateJiraConfigDto) => {
-      const response = await apiClient.post<JiraConfigDto>(
-        `/api/v1/projects/${data.projectId}/jira-config`,
-        {
-          jiraUrl: data.jiraUrl,
-          email: data.email,
-          apiToken: data.apiToken,
-          projectKey: data.projectKey,
-        },
-      );
+      const response = await apiClient.post<JiraConfigDto>(`/api/jira/config`, {
+        projectId: data.projectId,
+        jiraUrl: data.jiraUrl,
+        email: data.email,
+        apiToken: data.apiToken,
+        projectKey: data.projectKey,
+      });
       return response.data;
     },
     onSuccess: (_, variables) => {
@@ -471,8 +477,8 @@ export const useUpdateJiraConfig = () => {
 
   return useMutation({
     mutationFn: async ({ projectId, ...data }: UpdateJiraConfigDto) => {
-      const response = await apiClient.patch<JiraConfigDto>(
-        `/api/v1/projects/${projectId}/jira-config`,
+      const response = await apiClient.put<JiraConfigDto>(
+        `/api/jira/config/${projectId}`,
         data,
       );
       return response.data;
@@ -480,6 +486,82 @@ export const useUpdateJiraConfig = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: ["jira-config", variables.projectId],
+      });
+    },
+  });
+};
+
+// ============================================
+// JIRA SRS
+// ============================================
+
+export interface GenerateSrsFileResponse {
+  success: boolean;
+  filePath: string;
+  data?: string;
+}
+
+export interface ListSrsFilesResponse {
+  projectId: string;
+  files: string[];
+  count: number;
+}
+
+export const useListSrsFiles = (projectId: string, enabled: boolean = true) => {
+  return useQuery({
+    queryKey: ["jira-srs-files", projectId],
+    queryFn: async () => {
+      try {
+        const response = await apiClient.get<ListSrsFilesResponse>(
+          `/api/jira/srs/files/${projectId}`,
+        );
+        return response.data;
+      } catch (error: any) {
+        if (
+          error?.message?.includes("400") ||
+          error?.message?.includes("404")
+        ) {
+          return { projectId, files: [], count: 0 };
+        }
+        throw error;
+      }
+    },
+    enabled: !!projectId && enabled,
+  });
+};
+
+export interface GenerateSrsOptions {
+  usePaidModel?: boolean;
+  modelOption?: string;
+}
+
+export const useGenerateSrs = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      ...options
+    }: {
+      projectId: string;
+    } & GenerateSrsOptions) => {
+      // Use URLSearchParams to pass parameters in query string for GET request
+      const params = new URLSearchParams();
+      if (options.usePaidModel)
+        params.append("usePaidModel", String(options.usePaidModel));
+      if (options.modelOption)
+        params.append("modelOption", options.modelOption);
+
+      const response = await apiClient.get<string>(
+        `/api/v1/projects/${projectId}/srs/markdown?${params.toString()}`,
+      );
+      console.log(response.data);
+      // The response is already the data we want (markdown string)
+      return { success: true, filePath: "", data: response.data };
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["jira-srs-files", variables.projectId],
       });
     },
   });
@@ -617,6 +699,85 @@ export const useProjectGithubContributions = (
       }
     },
     enabled: !!projectId && hasRepos, // Only fetch when project has repos
+  });
+};
+
+export const useGithubContributionReports = (
+  projectId: string,
+  take: number = 10,
+) => {
+  return useQuery({
+    queryKey: ["github-reports", projectId, take],
+    queryFn: async () => {
+      const response = await apiClient.get<
+        GithubContributionReportSummaryDto[]
+      >(`/api/v1/projects/${projectId}/github-reports`, { take });
+      return response.data;
+    },
+    enabled: !!projectId,
+  });
+};
+
+export const useGithubContributionReport = (
+  projectId: string,
+  reportId?: string | null,
+) => {
+  return useQuery({
+    queryKey: ["github-report-detail", projectId, reportId],
+    queryFn: async () => {
+      const response = await apiClient.get<GithubContributionReportDto>(
+        `/api/v1/projects/${projectId}/github-reports/${reportId}`,
+      );
+      return response.data;
+    },
+    enabled: !!projectId && !!reportId,
+  });
+};
+
+export interface GenerateGithubContributionReportOptions {
+  usePaidModel?: boolean;
+  modelOption?: string;
+  recentWeeks?: number;
+  includeMermaidDiagrams?: boolean;
+}
+
+export const useGithubReportMermaidBlocks = (
+  projectId: string,
+  reportId?: string | null,
+) => {
+  return useQuery({
+    queryKey: ["github-report-mermaid-blocks", projectId, reportId],
+    queryFn: async () => {
+      const response = await apiClient.get<{ blocks: string[] }>(
+        `/api/v1/projects/${projectId}/github-reports/${reportId}/mermaid/blocks`,
+      );
+      return response.data.blocks;
+    },
+    enabled: !!projectId && !!reportId,
+  });
+};
+
+export const useGenerateGithubContributionReport = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      ...options
+    }: {
+      projectId: string;
+    } & GenerateGithubContributionReportOptions) => {
+      const response = await apiClient.post<GithubContributionReportDto>(
+        `/api/v1/projects/${projectId}/github-reports`,
+        options,
+      );
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["github-reports", variables.projectId],
+      });
+    },
   });
 };
 

@@ -1,10 +1,11 @@
-import React, { useState, FormEvent } from "react";
+import React, { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Info } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { useLogin } from "@/features/auth/api/authApi";
 import { useAuth } from "@/features/auth/context/AuthContext";
-import type { LoginDto } from "@/types";
+import type { LoginDto, UserRole } from "@/types";
 
 export const LoginForm: React.FC = () => {
   const navigate = useNavigate();
@@ -19,7 +20,6 @@ export const LoginForm: React.FC = () => {
     e.preventDefault();
     setError(null);
 
-    // Validate form
     if (!email || !password) {
       setError("Please enter email and password");
       return;
@@ -29,18 +29,16 @@ export const LoginForm: React.FC = () => {
       const credentials: LoginDto = { email, password };
       const response = await loginMutation.mutateAsync(credentials);
 
-      // Set auth state in context
       setAuthState(
         {
           userId: response.userId,
           name: response.name,
           email: response.email,
-          role: response.role,
+          role: response.role as UserRole,
         },
         response.token,
       );
 
-      // Redirect based on role (handle both PascalCase and UPPERCASE)
       const roleUpper = response.role.toUpperCase();
       switch (roleUpper) {
         case "ADMIN":
@@ -76,44 +74,28 @@ export const LoginForm: React.FC = () => {
       <div className="bg-white dark:bg-gray-800 p-10 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-gray-700">
         <form className="space-y-6" onSubmit={handleSubmit}>
           {/* Email Input */}
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
-            >
-              Email Address
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="block w-full px-4 py-3 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary rounded-lg bg-gray-50 dark:bg-gray-900 dark:border-gray-600 dark:text-white transition"
-              placeholder="your.email@example.com"
-              autoComplete="email"
-              required
-            />
-          </div>
+          <Input
+            id="email"
+            type="email"
+            label="Email Address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="your.email@example.com"
+            autoComplete="email"
+            required
+          />
 
           {/* Password Input */}
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
-            >
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="block w-full px-4 py-3 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary rounded-lg bg-gray-50 dark:bg-gray-900 dark:border-gray-600 dark:text-white transition"
-              placeholder="Enter your password"
-              autoComplete="current-password"
-              required
-            />
-          </div>
+          <Input
+            id="password"
+            type="password"
+            label="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter your password"
+            autoComplete="current-password"
+            required
+          />
 
           {/* Error Message */}
           {error && (
@@ -127,10 +109,11 @@ export const LoginForm: React.FC = () => {
           <Button
             type="submit"
             variant="primary"
-            disabled={loginMutation.isPending}
+            size="lg"
+            isLoading={loginMutation.isPending}
             className="w-full"
           >
-            {loginMutation.isPending ? "Logging in..." : "Login"}
+            Login
           </Button>
 
           {/* Info Note */}

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import { Search, FolderKanban, ArrowRight, Plus } from "lucide-react";
 import {
   useUserProjects,
@@ -64,11 +65,13 @@ export function StudentWorkspaceListPage() {
       setProjectName("");
       setProjectDescription("");
 
+      toast.success("Project created successfully");
+
       // Navigate to the new project workspace
       navigate(`/student/workspace/${result.projectId}`);
     } catch (error) {
       console.error("Failed to create project:", error);
-      alert("Failed to create project. Please try again.");
+      toast.error("Failed to create project. Please try again.");
     }
   };
 

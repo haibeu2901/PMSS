@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import { Plus, Search, BookOpen, Users, GraduationCap } from "lucide-react";
 import { useUserEnrollments, useUnenrollment } from "../api/useEnrollments";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { ConfirmDialog } from "@/components/ui/Modal";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import type { ClassEnrollmentDto } from "@/types";
 
@@ -12,6 +14,7 @@ export function StudentClassesPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
+  const [classToUnenroll, setClassToUnenroll] = useState<string | null>(null);
 
   const { data: enrollments = [], isLoading } = useUserEnrollments(
     user?.userId || "",
@@ -31,17 +34,23 @@ export function StudentClassesPage() {
       .includes(searchTerm.toLowerCase()),
   );
 
-  const handleUnenroll = async (classId: string) => {
-    if (!user) return;
-    if (!confirm("Are you sure you want to unenroll from this class?")) return;
+  const handleUnenroll = (classId: string) => {
+    setClassToUnenroll(classId);
+  };
+
+  const handleConfirmUnenroll = async () => {
+    if (!classToUnenroll || !user) return;
 
     try {
       await unenrollMutation.mutateAsync({
-        classId,
+        classId: classToUnenroll,
         userId: user.userId,
       });
+      toast.success("Unenrolled from class successfully");
+      setClassToUnenroll(null);
     } catch (error) {
       console.error("Failed to unenroll:", error);
+      toast.error("Failed to unenroll from class");
     }
   };
 
@@ -103,6 +112,18 @@ export function StudentClassesPage() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={!!classToUnenroll}
+        onClose={() => setClassToUnenroll(null)}
+        onConfirm={handleConfirmUnenroll}
+        title="Unenroll from Class"
+        message="Are you sure you want to unenroll from this class?"
+        confirmText="Unenroll"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={unenrollMutation.isPending}
+      />
     </div>
   );
 }

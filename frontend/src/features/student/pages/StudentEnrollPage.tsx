@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import { ArrowLeft, Search, BookOpen, Calendar, User } from "lucide-react";
 import { useAvailableClasses } from "../api/useClasses";
 import { useUserEnrollments, useCreateEnrollment } from "../api/useEnrollments";
@@ -46,10 +47,12 @@ export function StudentEnrollPage() {
         classId,
         userId: user.userId,
       });
+      toast.success("Enrolled in class successfully");
       // Navigate back to classes page after successful enrollment
       navigate("/student/classes");
     } catch (error) {
       console.error("Failed to enroll:", error);
+      toast.error("Failed to enroll in class");
     }
   };
 

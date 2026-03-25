@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "react-hot-toast";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -51,10 +52,10 @@ export function StudentSettingsPage() {
           role: user.role,
         },
       });
-      alert("Profile updated successfully!");
+      toast.success("Profile updated successfully!");
     } catch (error) {
       console.error("Failed to update profile:", error);
-      alert("Failed to update profile");
+      toast.error("Failed to update profile");
     }
   };
 
@@ -210,12 +211,12 @@ function ChangePasswordModal({
     e.preventDefault();
 
     if (formData.newPassword !== formData.confirmPassword) {
-      alert("Passwords do not match");
+      toast.error("Passwords do not match");
       return;
     }
 
     if (formData.newPassword.length < 6) {
-      alert("Password must be at least 6 characters");
+      toast.error("Password must be at least 6 characters");
       return;
     }
 
@@ -225,7 +226,7 @@ function ChangePasswordModal({
         currentPassword: formData.currentPassword,
         newPassword: formData.newPassword,
       });
-      alert("Password changed successfully!");
+      toast.success("Password changed successfully!");
       setFormData({
         currentPassword: "",
         newPassword: "",
@@ -234,7 +235,9 @@ function ChangePasswordModal({
       onClose();
     } catch (error) {
       console.error("Failed to change password:", error);
-      alert("Failed to change password. Please check your current password.");
+      toast.error(
+        "Failed to change password. Please check your current password.",
+      );
     }
   };
 

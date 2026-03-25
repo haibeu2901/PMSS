@@ -99,9 +99,12 @@ export interface GetClassByIdResponse {
 export const classKeys = {
   all: ["classes"] as const,
   lists: () => [...classKeys.all, "list"] as const,
+  list: (filters: any) => [...classKeys.lists(), filters] as const,
   details: () => [...classKeys.all, "detail"] as const,
   detail: (id: string) => [...classKeys.details(), id] as const,
 };
+
+// ... existing queries ...
 
 // Fetch all classes via GraphQL
 export const useClasses = () => {

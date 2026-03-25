@@ -24,13 +24,13 @@ export const UserTable: React.FC<UserTableProps> = ({
 }) => {
   // Generate avatar background color based on role
   const getAvatarClass = (role: User["role"]) => {
-    const map = {
+    const map: Record<string, string> = {
       ADMIN: "bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300",
       TEACHER: "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300",
       STUDENT:
         "bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300",
     };
-    return map[role];
+    return map[role.toUpperCase()] || "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300";
   };
 
   // Format role for display

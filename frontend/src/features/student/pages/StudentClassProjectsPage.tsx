@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import {
   ArrowLeft,
   FolderKanban,
@@ -55,11 +56,12 @@ export function StudentClassProjectsPage() {
         projectId,
         userId: user.userId,
       });
+      toast.success("Joined project successfully");
       // Navigate to workspace after joining
       navigate(`/student/workspace/${projectId}`);
     } catch (error) {
       console.error("Failed to join project:", error);
-      alert("Failed to join project. Please try again.");
+      toast.error("Failed to join project. Please try again.");
     }
   };
 
@@ -81,6 +83,8 @@ export function StudentClassProjectsPage() {
         userId: user.userId,
       });
 
+      toast.success("Project created successfully");
+
       // Navigate to the new project workspace
       navigate(`/student/workspace/${result.projectId}`);
 
@@ -89,7 +93,7 @@ export function StudentClassProjectsPage() {
       setShowCreateForm(false);
     } catch (error) {
       console.error("Failed to save project:", error);
-      alert("Failed to save project. Please try again.");
+      toast.error("Failed to save project. Please try again.");
     }
   };
 

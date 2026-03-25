@@ -1,16 +1,31 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { ArrowLeft, BookOpen, Users, Mail } from "lucide-react";
+import {
+  ArrowLeft,
+  BookOpen,
+  Users,
+  Mail,
+  UserPlus,
+  Trash2,
+} from "lucide-react";
 import { useClass } from "../api/useClasses";
-import { useClassEnrollments } from "@/features/student/api/useEnrollments";
+import {
+  useClassEnrollments,
+  useUnenrollment,
+} from "@/features/student/api/useEnrollments";
 import { Button } from "@/components/ui/Button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import { Card } from "@/components/ui/Card";
+import { AddStudentModal } from "../components/AddStudentModal";
+import { ConfirmDialog } from "@/components/ui/Modal";
+import { toast } from "react-hot-toast";
 
 export function ClassDetailPage() {
   const { classId } = useParams<{ classId: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("info");
+  const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
+  const [studentToRemove, setStudentToRemove] = useState<string | null>(null);
 
   const {
     data: classData,
@@ -19,6 +34,24 @@ export function ClassDetailPage() {
   } = useClass(classId || "");
   const { data: enrollments, isLoading: isEnrollmentsLoading } =
     useClassEnrollments(classId || "");
+
+  const unenrollMutation = useUnenrollment();
+
+  const handleRemoveStudent = async () => {
+    if (!classId || !studentToRemove) return;
+
+    try {
+      await unenrollMutation.mutateAsync({
+        classId,
+        userId: studentToRemove,
+      });
+      toast.success("Student removed successfully");
+      setStudentToRemove(null);
+    } catch (error) {
+      console.error("Failed to remove student:", error);
+      toast.error("Failed to remove student");
+    }
+  };
 
   if (!classId) {
     return (
@@ -158,6 +191,17 @@ export function ClassDetailPage() {
 
         {/* Students Tab */}
         <TabsContent value="students" className="space-y-4">
+          <div className="flex justify-end">
+            <Button
+              onClick={() => setIsAddStudentModalOpen(true)}
+              className="flex items-center gap-2"
+              size="sm"
+            >
+              <UserPlus className="w-4 h-4" />
+              Add Student
+            </Button>
+          </div>
+
           {!enrollments || enrollments.length === 0 ? (
             <Card className="p-6">
               <p className="text-gray-500 text-center">
@@ -183,11 +227,22 @@ export function ClassDetailPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="text-right text-sm text-gray-500 dark:text-gray-400">
-                      <div className="font-medium">Enrolled</div>
-                      <div>
-                        {new Date(enrollment.enrolledAt).toLocaleDateString()}
+                    <div className="flex items-center gap-4">
+                      <div className="text-right text-sm text-gray-500 dark:text-gray-400">
+                        <div className="font-medium">Enrolled</div>
+                        <div>
+                          {new Date(enrollment.enrolledAt).toLocaleDateString()}
+                        </div>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
+                        onClick={() => setStudentToRemove(enrollment.userId)}
+                        title="Remove student"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
                 </Card>
@@ -196,6 +251,27 @@ export function ClassDetailPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Modals */}
+      {classId && (
+        <AddStudentModal
+          isOpen={isAddStudentModalOpen}
+          onClose={() => setIsAddStudentModalOpen(false)}
+          classId={classId}
+        />
+      )}
+
+      {/* Remove Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={!!studentToRemove}
+        onClose={() => setStudentToRemove(null)}
+        onConfirm={handleRemoveStudent}
+        title="Remove Student"
+        message="Are you sure you want to remove this student from the class? This action cannot be undone."
+        confirmText="Remove"
+        variant="danger"
+        isLoading={unenrollMutation.isPending}
+      />
     </div>
   );
 }
