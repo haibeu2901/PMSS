@@ -4,6 +4,11 @@
 
 A full-stack application for managing academic projects with GitHub and Jira integration. Built with **ASP.NET Core 10** (backend) and **React** (frontend), following Clean Architecture principles and modern development best practices.
 
+The system is now successfully deployed with:
+- Backend on **Azure App Service**
+- Database on **Azure SQL Database**
+- Frontend on **Vercel**
+
 ## ✨ Features
 
 ### Core Features
@@ -29,6 +34,11 @@ A full-stack application for managing academic projects with GitHub and Jira int
 - [Node.js 18+](https://nodejs.org/)
 - npm, yarn, or pnpm
 
+#### Mobile
+- [Flutter SDK](https://flutter.dev/docs/get-started/install)
+- Android Studio (for Android development)
+- Xcode (for iOS development on macOS)
+
 ### Clone Repository
 
 ```bash
@@ -46,10 +56,10 @@ dotnet ef database update --project ../PMSS.Infrastructure
 dotnet run
 ```
 
-🌐 Backend runs at: **https://localhost:5001**  
-📚 Swagger UI: **https://localhost:5001/swagger**
+🌐 Backend runs at: **https://localhost:7136** or **http://localhost:5068**  
+📚 Swagger UI: **https://localhost:7136/swagger** or **http://localhost:5068/swagger**
 
-### Frontend Setup (Coming Soon)
+### Frontend Setup
 
 ```bash
 cd frontend
@@ -58,6 +68,14 @@ npm run dev
 ```
 
 🌐 Frontend will run at: **http://localhost:5173**
+
+### Mobile Setup
+
+```bash
+cd mobile
+flutter pub get
+flutter run
+```
 
 ## 📁 Project Structure
 
@@ -75,16 +93,22 @@ PMSS/
 │   ├── PMSS.API/                # Controllers & middleware
 │   └── PMSS.slnx                # Solution file
 │
-├── frontend/                    # ⚛️ React App (to be implemented)
+├── frontend/                    # ⚛️ React App (deployed on Vercel)
 │   ├── README.md                # Frontend setup guide
 │   ├── src/                     # Source code
 │   ├── public/                  # Static assets
 │   └── package.json             # Dependencies
 │
-└── docs/                        # 📖 Documentation
-    ├── API.md                   # API endpoints
-    ├── DATABASE.md              # Database schema
-    └── ARCHITECTURE.md          # System design
+├── mobile/                      # 📱 Flutter Mobile App
+│   ├── README.md                # Mobile setup guide
+│   ├── lib/                     # Dart source code
+│   ├── test/                    # Mobile tests
+│   └── pubspec.yaml             # Dependencies
+│
+└── DOCS/                        # 📖 Documentation
+    ├── QUICK_REFERENCE.md       # Quick reference
+    ├── GRAPHQL_QUERY_EXAMPLES.md # GraphQL examples
+    └── IMPLEMENTATION_SUMMARY.md # Implementation summary
 ```
 
 ## 🏗️ Architecture
@@ -132,6 +156,8 @@ src/
 | Users | `/api/users` | GET, POST, PUT, DELETE |
 | Courses | `/api/courses` | GET, POST, PUT, DELETE |
 | Projects | `/api/projects` | GET, POST, PUT, DELETE |
+
+> Note: This table highlights core resources. For additional endpoints (Auth, Classes, GitHub, Jira, Notifications, SRS, and more), see [DOCS/QUICK_REFERENCE.md](DOCS/QUICK_REFERENCE.md).
 
 ### Query Parameters (All Endpoints)
 
@@ -253,40 +279,53 @@ git push origin feature/your-feature-name
 | [Backend README](backend/README.md) | Backend setup & development |
 | [Frontend README](frontend/README.md) | Frontend setup & development |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution guidelines |
-| [docs/API.md](docs/API.md) | Detailed API documentation |
-| [docs/DATABASE.md](docs/DATABASE.md) | Database schema details |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture |
+| [DOCS/QUICK_REFERENCE.md](DOCS/QUICK_REFERENCE.md) | API quick reference |
+| [DOCS/GRAPHQL_QUERY_EXAMPLES.md](DOCS/GRAPHQL_QUERY_EXAMPLES.md) | GraphQL query examples |
+| [DOCS/IMPLEMENTATION_SUMMARY.md](DOCS/IMPLEMENTATION_SUMMARY.md) | Implementation summary |
+| [DOCS/GITHUB_REPO_FEATURE_README.md](DOCS/GITHUB_REPO_FEATURE_README.md) | GitHub repo feature docs |
+| [DOCS/GITHUB_CONTRIBUTION_DASHBOARD.md](DOCS/GITHUB_CONTRIBUTION_DASHBOARD.md) | Contribution dashboard docs |
 
 ## 🧪 Testing
 
 ### Backend Tests
 
-```bash
-cd backend
-dotnet test
-```
+Backend automated test projects are not added yet.
 
 ### Frontend Tests
 
+Frontend test scripts are not configured yet.
+
 ```bash
 cd frontend
-npm run test
+npm run lint
+```
+
+### Mobile Tests
+
+```bash
+cd mobile
+flutter test
 ```
 
 ## 🚢 Deployment
 
-### Backend Deployment
+### Current Production Environment
 
-- Azure App Service
-- AWS Elastic Beanstalk
-- Docker Container
+- ✅ **Backend API:** Azure App Service
+- ✅ **Database:** Azure SQL Database
+- ✅ **Frontend:** Vercel
 
-### Frontend Deployment
+### Deployment Architecture
 
-- Vercel (recommended)
-- Netlify
-- AWS S3 + CloudFront
-- GitHub Pages
+```text
+Vercel (React Frontend)
+  |
+  v
+Azure App Service (ASP.NET Core API)
+  |
+  v
+Azure SQL Database
+```
 
 ## 🤝 Contributing
 
@@ -322,7 +361,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
 - [ ] Contribution statistics
 
 ### Phase 3: Frontend 📋
-- [ ] React app setup
+- [x] React app setup
 - [ ] Dashboard implementation
 - [ ] Project management UI
 - [ ] User management UI
@@ -331,7 +370,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
 - [ ] Unit & integration tests
 - [ ] Performance optimization
 - [ ] Documentation completion
-- [ ] Deployment pipeline
+- [x] Cloud deployment (Azure App Service + Azure SQL Database + Vercel)
 
 ## 🙏 Acknowledgments
 
